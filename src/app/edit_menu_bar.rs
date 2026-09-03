@@ -3,9 +3,9 @@ use eframe::egui;
 
 impl NotepadApp {
     pub(super) fn show_edit_menu_list(&mut self, ui: &mut egui::Ui) {
-        ui.menu_button("Edit", |ui| {
-            let has_selection = self.active_editor_has_selection(ui.ctx());
+        let has_selection = self.active_editor_has_selection();
 
+        ui.menu_button("Edit", |ui| {
             if ui.button("Undo").clicked() {
                 self.undo_active_document(ui.ctx());
                 ui.close();
@@ -18,7 +18,6 @@ impl NotepadApp {
 
             ui.separator();
 
-            // Copy is disabled when nothing is selected.
             if ui
                 .add_enabled(has_selection, egui::Button::new("Copy"))
                 .clicked()
@@ -27,7 +26,6 @@ impl NotepadApp {
                 ui.close();
             }
 
-            // Cut also requires a selection.
             if ui
                 .add_enabled(has_selection, egui::Button::new("Cut"))
                 .clicked()
@@ -36,9 +34,17 @@ impl NotepadApp {
                 ui.close();
             }
 
-            // Paste is discussed below.
+            if ui
+                .add_enabled(has_selection, egui::Button::new("Delete"))
+                .clicked()
+            {
+                self.delete_selection(ui.ctx());
+                ui.close();
+            }
+
+            // Paste does NOT require a selection.
             if ui.button("Paste").clicked() {
-                self.paste(ui.ctx());
+                self.request_paste();
                 ui.close();
             }
         });

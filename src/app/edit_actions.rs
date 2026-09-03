@@ -26,7 +26,6 @@ impl NotepadApp {
 
         let mut undoer = state.undoer();
 
-        let undo_result = undoer.undo(&current_state); //takes (CCorserRange, String)
         let previous_state = match undoer.undo(&current_state).cloned() {
             //that makes it owned
             Some(previous_state) => previous_state,
@@ -92,48 +91,147 @@ impl NotepadApp {
         state.store(ctx, editor_id);
     }
 
+    pub(super) fn delete_selection(&mut self, ctx: &egui::Context) {
+        let document_id = self.workspace.active_document().id();
+
+        let (selection_document_id, cursor_range) = match self.last_editor_selection {
+            Some(value) => value,
+            None => return,
+        };
+
+        if selection_document_id != document_id {
+            return;
+        }
+
+        let range = cursor_range.as_sorted_char_range();
+
+        if range.start == range.end {
+            return;
+        }
+
+        {
+            let document = self.workspace.active_document_mut();
+
+            // TextBuffer uses character indexes, matching egui's cursor indexes.
+            document.content_mut().delete_char_range(range.clone());
+
+            document.mark_as_modified();
+        }
+
+        let editor_id = egui::Id::new(("editor", document_id));
+
+        if let Some(mut state) = egui::TextEdit::load_state(ctx, editor_id) {
+            // Collapse the cursor where the deleted selection started.
+            let cursor = egui::text::CCursor::new(range.start);
+
+            state
+                .cursor
+                .set_char_range(Some(egui::text::CCursorRange::one(cursor)));
+
+            state.store(ctx, editor_id);
+        }
+
+        self.last_editor_selection = None;
+
+        ctx.memory_mut(|memory| {
+            memory.request_focus(editor_id);
+        });
+    }
     pub(super) fn copy_selection(&self, ctx: &egui::Context) {
-        // Get the active document so we can rebuild
-        // the exact same TextEdit ID used in show_editor().
+        let document = self.workspace.active_document();
+
+        let (document_id, cursor_range) = match self.last_editor_selection {
+            Some(value) => value,
+            None => return,
+        };
+
+        // Cached selection must belong to this document.
+        if document_id != document.id() {
+            return;
+        }
+
+        let range = cursor_range.as_sorted_char_range();
+
+        if range.start == range.end {
+            return;
+        }
+
+        // egui cursor positions are CHARACTER positions,
+        // so use TextBuffer::char_range instead of normal
+        // Rust byte slicing.
+        let selected_text = document.content().char_range(range).to_owned();
+
+        // Send the selected text directly to the OS clipboard.
+        ctx.copy_text(selected_text);
+    }
+
+    pub(super) fn cut_selection(&mut self, ctx: &egui::Context) {
         let document_id = self.workspace.active_document().id();
+
+        let (selection_document_id, cursor_range) = match self.last_editor_selection {
+            Some(value) => value,
+            None => return,
+        };
+
+        if selection_document_id != document_id {
+            return;
+        }
+
+        let range = cursor_range.as_sorted_char_range();
+
+        if range.start == range.end {
+            return;
+        }
+
+        // Copy the selected text before removing it.
+        let selected_text = self
+            .workspace
+            .active_document()
+            .content()
+            .char_range(range.clone())
+            .to_owned();
+
+        ctx.copy_text(selected_text);
+
+        {
+            let document = self.workspace.active_document_mut();
+
+            // TextBuffer uses character indexes, matching egui's cursor indexes.
+            document.content_mut().delete_char_range(range.clone());
+
+            document.mark_as_modified();
+        }
 
         let editor_id = egui::Id::new(("editor", document_id));
 
-        // The Edit menu temporarily takes focus away from
-        // the TextEdit. Give focus back to the active editor.
-        ctx.memory_mut(|memory| {
-            memory.request_focus(editor_id);
-        });
+        if let Some(mut state) = egui::TextEdit::load_state(ctx, editor_id) {
+            // After Cut, collapse the selection at its starting position.
+            let cursor = egui::text::CCursor::new(range.start);
 
-        // Ask egui to perform the same operation as Ctrl+C.
-        // The TextEdit will handle its own current selection.
-        ctx.send_viewport_cmd(egui::ViewportCommand::RequestCopy);
-    }
+            state
+                .cursor
+                .set_char_range(Some(egui::text::CCursorRange::one(cursor)));
 
-    pub(super) fn cut_selection(&self, ctx: &egui::Context) {
-        let document_id = self.workspace.active_document().id();
-        let editor_id = egui::Id::new(("editor", document_id));
+            state.store(ctx, editor_id);
+        }
+
+        self.last_editor_selection = None;
 
         ctx.memory_mut(|memory| {
             memory.request_focus(editor_id);
         });
-
-        ctx.send_viewport_cmd(egui::ViewportCommand::RequestCut);
     }
 
-    pub(super) fn paste(&self, ctx: &egui::Context) {
-        let document_id = self.workspace.active_document().id();
-        let editor_id = egui::Id::new(("editor", document_id));
-
-        ctx.memory_mut(|memory| {
-            memory.request_focus(editor_id);
-        });
-
-        ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaste);
+    pub(super) fn request_paste(&mut self) {
+        // Don't paste immediately because the menu currently
+        // owns focus.
+        //
+        // show_editor() will perform the actual paste after
+        // returning focus to the TextEdit.
+        self.pending_paste = true;
     }
 
-    pub(super) fn active_editor_has_selection(&self, ctx: &egui::Context) -> bool {
-        // Get the active document so we can rebuild its editor ID.
+    pub(super) fn active_editor_has_selection(&self) -> bool {
         let active_document_id = self.workspace.active_document().id();
 
         let (document_id, cursor_range) = match self.last_editor_selection {
@@ -141,11 +239,33 @@ impl NotepadApp {
             None => return false,
         };
 
+        // Never use a selection belonging to another tab.
         if document_id != active_document_id {
             return false;
-        };
+        }
+
         let range = cursor_range.as_sorted_char_range();
 
         range.start != range.end
+    }
+
+    pub(super) fn process_pending_editor_actions(&mut self, ctx: &egui::Context) {
+        if !self.pending_paste {
+            return;
+        }
+
+        let document_id = self.workspace.active_document().id();
+
+        let editor_id = egui::Id::new(("editor", document_id));
+
+        ctx.memory_mut(|memory| {
+            memory.request_focus(editor_id);
+        });
+
+        ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaste);
+
+        ctx.request_repaint();
+
+        self.pending_paste = false;
     }
 }

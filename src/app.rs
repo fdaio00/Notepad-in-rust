@@ -18,6 +18,9 @@ pub(crate) struct NotepadApp {
     pending_action: Option<PendingAction>,
     allow_exit: bool,
     last_editor_selection: Option<(usize, egui::text::CCursorRange)>,
+    // Paste cannot safely happen while the menu owns focus.
+    // We queue it and process it when show_editor() runs.
+    pending_paste: bool,
 }
 
 impl NotepadApp {
@@ -35,11 +38,13 @@ impl NotepadApp {
             pending_action: None,
             allow_exit: false,
             last_editor_selection: None,
+            pending_paste: false,
         }
     }
 }
 impl eframe::App for NotepadApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.process_pending_editor_actions(ui.ctx());
         self.update_window_title(ui.ctx());
 
         egui::Panel::top("menu_bar").show(ui, |ui| {

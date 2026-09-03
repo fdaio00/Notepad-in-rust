@@ -5,28 +5,41 @@ impl NotepadApp {
     //The Ui here is to build the UI.
     pub(super) fn show_editor(&mut self, ui: &mut egui::Ui) {
         let document_id = self.workspace.active_document().id();
+
+        // Stable ID keeps editor state separate for every document.
         let editor_id = egui::Id::new(("editor", document_id));
 
-        let response = {
+        let available_size = ui.available_size();
+        let main_direction = ui.layout().main_dir();
+
+        // Same sizing idea as add_sized(), but gives us TextEditOutput.
+        let output = {
             let document = self.workspace.active_document_mut();
 
-            let response = ui.add_sized(
-                ui.available_size(),
-                egui::TextEdit::multiline(document.content_mut()).id(editor_id),
-            );
-
-            if response.changed() {
-                document.mark_as_modified();
-            }
-
-            response
+            ui.allocate_ui_with_layout(
+                available_size,
+                egui::Layout::centered_and_justified(main_direction),
+                |ui| {
+                    egui::TextEdit::multiline(document.content_mut())
+                        .id(editor_id)
+                        .show(ui)
+                },
+            )
+            .inner
         };
 
-        if response.has_focus() {
-            if let Some(state) = egui::TextEdit::load_state(ui.ctx(), editor_id) {
-                if let Some(cursor_range) = state.cursor.char_range() {
-                    self.last_editor_selection = Some((document_id, cursor_range));
-                }
+        if output.response.changed() {
+            self.workspace.active_document_mut().mark_as_modified();
+        }
+
+        // None means the editor lost focus; keep the previous selection.
+        if let Some(cursor_range) = output.cursor_range {
+            let range = cursor_range.as_sorted_char_range();
+
+            if range.start != range.end {
+                self.last_editor_selection = Some((document_id, cursor_range));
+            } else {
+                self.last_editor_selection = None;
             }
         }
     }
