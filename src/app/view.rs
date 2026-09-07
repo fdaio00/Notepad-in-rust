@@ -56,27 +56,47 @@ impl NotepadApp {
     pub(super) fn show_menu_bar(&mut self, ui: &mut egui::Ui) {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
-                if ui.button("New").clicked() {
+                if ui
+                    .add(egui::Button::new("New").shortcut_text("Ctrl+N"))
+                    .clicked()
+                {
                     self.request_new_document();
                     ui.close();
-                };
-                if ui.button("Open").clicked() {
+                }
+
+                if ui
+                    .add(egui::Button::new("Open").shortcut_text("Ctrl+O"))
+                    .clicked()
+                {
                     self.open_file();
                     ui.close();
-                };
-                if ui.button("Save").clicked() {
+                }
+
+                if ui
+                    .add(egui::Button::new("Save").shortcut_text("Ctrl+S"))
+                    .clicked()
+                {
                     let index = self.workspace.active_tab();
                     self.save_document(index);
-                    ui.close()
+                    ui.close();
                 }
-                if ui.button("Save As").clicked() {
+
+                if ui
+                    .add(egui::Button::new("Save As").shortcut_text("Ctrl+Shift+S"))
+                    .clicked()
+                {
                     let index = self.workspace.active_tab();
                     self.save_document_as(index);
-                    ui.close()
+                    ui.close();
                 }
-                if ui.button("Exit").clicked() {
-                    self.request_exit(ui.ctx());
-                    ui.close()
+
+                if ui
+                    .add(egui::Button::new("Close Tab").shortcut_text("Ctrl+W"))
+                    .clicked()
+                {
+                    let index = self.workspace.active_tab();
+                    self.request_close_tab(index);
+                    ui.close();
                 }
             });
             self.show_edit_menu_list(ui);
