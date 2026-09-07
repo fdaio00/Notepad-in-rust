@@ -5,6 +5,7 @@ mod edit_actions;
 mod edit_menu_bar;
 mod file_actions;
 mod session;
+mod shortcuts;
 mod view;
 mod workspace;
 
@@ -46,6 +47,7 @@ impl eframe::App for NotepadApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.process_pending_editor_actions(ui.ctx());
         self.update_window_title(ui.ctx());
+        self.handle_shortcuts(ui.ctx());
 
         egui::Panel::top("menu_bar").show(ui, |ui| {
             self.show_menu_bar(ui);

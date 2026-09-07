@@ -5,13 +5,23 @@ impl NotepadApp {
     pub(super) fn show_edit_menu_list(&mut self, ui: &mut egui::Ui) {
         let has_selection = self.active_editor_has_selection();
 
+        let has_selection = self.active_editor_has_selection();
+
+        let (can_undo, can_redo) = self.active_editor_history_status(ui.ctx());
+
         ui.menu_button("Edit", |ui| {
-            if ui.button("Undo").clicked() {
+            if ui
+                .add_enabled(can_undo, egui::Button::new("Undo"))
+                .clicked()
+            {
                 self.undo_active_document(ui.ctx());
                 ui.close();
             }
 
-            if ui.button("Redo").clicked() {
+            if ui
+                .add_enabled(can_redo, egui::Button::new("Redo"))
+                .clicked()
+            {
                 self.redo_active_document(ui.ctx());
                 ui.close();
             }

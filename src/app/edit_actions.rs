@@ -90,7 +90,39 @@ impl NotepadApp {
         state.set_undoer(undoer);
         state.store(ctx, editor_id);
     }
+    pub(super) fn select_all(&mut self, ctx: &egui::Context) {
+        let document = self.workspace.active_document();
 
+        let document_id = document.id();
+
+        let text_length = document.content().chars().count();
+
+        if text_length == 0 {
+            return;
+        }
+
+        let editor_id = egui::Id::new(("editor", document_id));
+
+        let mut state = match egui::TextEdit::load_state(ctx, editor_id) {
+            Some(state) => state,
+            None => return,
+        };
+
+        let start = egui::text::CCursor::new(0);
+        let end = egui::text::CCursor::new(text_length);
+
+        let cursor_range = egui::text::CCursorRange::two(start, end);
+
+        state.cursor.set_char_range(Some(cursor_range));
+
+        state.store(ctx, editor_id);
+
+        self.last_editor_selection = Some((document_id, cursor_range));
+
+        ctx.memory_mut(|memory| {
+            memory.request_focus(editor_id);
+        });
+    }
     pub(super) fn delete_selection(&mut self, ctx: &egui::Context) {
         let document_id = self.workspace.active_document().id();
 
@@ -267,5 +299,30 @@ impl NotepadApp {
         ctx.request_repaint();
 
         self.pending_paste = false;
+    }
+
+    pub(super) fn active_editor_history_status(&self, ctx: &egui::Context) -> (bool, bool) {
+        let document = self.workspace.active_document();
+        let editor_id = egui::Id::new(("editor", document.id()));
+
+        let state = match egui::TextEdit::load_state(ctx, editor_id) {
+            Some(state) => state,
+            None => return (false, false),
+        };
+
+        let cursor_range = match state.cursor.char_range() {
+            Some(range) => range,
+            None => return (false, false),
+        };
+
+        // Undoer compares its history against the current editor state.
+        let current_state = (cursor_range, document.content().to_owned());
+
+        let undoer = state.undoer();
+
+        (
+            undoer.has_undo(&current_state),
+            undoer.has_redo(&current_state),
+        )
     }
 }
