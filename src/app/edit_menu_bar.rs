@@ -78,6 +78,14 @@ impl NotepadApp {
                 self.select_all(ui.ctx());
                 ui.close();
             }
+
+            if ui
+                .add(egui::Button::new("Find").shortcut_text("Ctrl+F"))
+                .clicked()
+            {
+                self.open_find();
+                ui.close();
+            }
         });
     }
 }

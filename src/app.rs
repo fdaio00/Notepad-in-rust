@@ -4,10 +4,13 @@ mod actions;
 mod edit_actions;
 mod edit_menu_bar;
 mod file_actions;
+mod search;
 mod session;
 mod shortcuts;
 mod view;
 mod workspace;
+
+use search::SearchState;
 
 use crate::app::actions::PendingAction;
 use crate::ui::dialogs::dialog::{show_confirmation_dialog, DialogResult};
@@ -22,6 +25,7 @@ pub(crate) struct NotepadApp {
     // Paste cannot safely happen while the menu owns focus.
     // We queue it and process it when show_editor() runs.
     pending_paste: bool,
+    search: SearchState,
 }
 
 impl NotepadApp {
@@ -40,6 +44,7 @@ impl NotepadApp {
             allow_exit: false,
             last_editor_selection: None,
             pending_paste: false,
+            search: SearchState::new(),
         }
     }
 }
@@ -54,6 +59,7 @@ impl eframe::App for NotepadApp {
         });
         egui::CentralPanel::default().show(ui, |ui| {
             self.show_tabs(ui);
+            self.show_find_bar(ui);
             ui.separator();
             self.show_editor(ui);
         });

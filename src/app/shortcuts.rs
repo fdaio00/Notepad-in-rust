@@ -17,12 +17,18 @@ impl NotepadApp {
 
         let close_tab = egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::W);
 
+        let find = egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::F);
+
         if ctx.input_mut(|input| input.consume_shortcut(&save_as)) {
             let index = self.workspace.active_tab();
             self.save_document_as(index);
             return;
         }
 
+        if ctx.input_mut(|input| input.consume_shortcut(&find)) {
+            self.open_find();
+            return;
+        }
         if ctx.input_mut(|input| input.consume_shortcut(&save)) {
             let index = self.workspace.active_tab();
             self.save_document(index);
