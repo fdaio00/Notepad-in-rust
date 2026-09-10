@@ -26,6 +26,8 @@ pub(crate) struct NotepadApp {
     // We queue it and process it when show_editor() runs.
     pending_paste: bool,
     search: SearchState,
+    // Controls whether long lines continue on the next visual line.
+    word_wrap: bool,
 }
 
 impl NotepadApp {
@@ -45,6 +47,7 @@ impl NotepadApp {
             last_editor_selection: None,
             pending_paste: false,
             search: SearchState::new(),
+            word_wrap: true,
         }
     }
 }

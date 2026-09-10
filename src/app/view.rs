@@ -10,22 +10,28 @@ impl NotepadApp {
         let editor_id = egui::Id::new(("editor", document_id));
 
         let available_size = ui.available_size();
-        let main_direction = ui.layout().main_dir();
+        let word_wrap = self.word_wrap;
 
-        // Same sizing idea as add_sized(), but gives us TextEditOutput.
+        // Horizontal scrolling is only needed when Word Wrap is turned off.
         let output = {
             let document = self.workspace.active_document_mut();
 
-            ui.allocate_ui_with_layout(
-                available_size,
-                egui::Layout::centered_and_justified(main_direction),
-                |ui| {
+            egui::ScrollArea::new([!word_wrap, false])
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    let editor_width = if word_wrap {
+                        ui.available_width()
+                    } else {
+                        f32::INFINITY
+                    };
+
                     egui::TextEdit::multiline(document.content_mut())
                         .id(editor_id)
+                        .desired_width(editor_width)
+                        .min_size(available_size)
                         .show(ui)
-                },
-            )
-            .inner
+                })
+                .inner
         };
 
         if output.response.changed() {
@@ -100,6 +106,12 @@ impl NotepadApp {
                 }
             });
             self.show_edit_menu_list(ui);
+            ui.menu_button("View", |ui| {
+                // The checkbox directly turns Word Wrap on or off.
+                if ui.checkbox(&mut self.word_wrap, "Word Wrap").clicked() {
+                    ui.close();
+                }
+            });
         });
     }
 
