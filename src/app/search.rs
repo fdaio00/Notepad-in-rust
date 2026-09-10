@@ -7,6 +7,8 @@ pub(super) struct SearchState {
     // This focuses the search box only when Ctrl+F opens it.
     focus_requested: bool,
     not_found: bool,
+    // The search can continue again from the opposite side of the document.
+    wrap_around: bool,
     // Apply the match after the button or Enter event has finished.
     pending_selection: Option<(usize, egui::text::CCursorRange)>,
 }
@@ -19,6 +21,7 @@ impl SearchState {
             visible: false,
             focus_requested: false,
             not_found: false,
+            wrap_around: true,
             pending_selection: None,
         }
     }
@@ -93,12 +96,23 @@ impl NotepadApp {
                 find_next_requested = true;
             }
 
+            if ui
+                .checkbox(&mut self.search.wrap_around, "Wrap around")
+                .changed()
+            {
+                self.search.not_found = false;
+            }
+
             if ui.button("x").on_hover_text("Close find").clicked() {
                 close_requested = true;
             }
 
             if self.search.not_found {
-                ui.label("No results found");
+                if self.search.wrap_around {
+                    ui.label("No results found");
+                } else {
+                    ui.label("No more results");
+                }
             }
         });
 
@@ -137,10 +151,13 @@ impl NotepadApp {
 
         let start_byte = char_to_byte_index(&text, start_char);
 
-        // Search backward, then wrap to the end.
-        let match_byte = text[..start_byte]
-            .rfind(&query)
-            .or_else(|| text.rfind(&query));
+        // First search only before the current selection.
+        let mut match_byte = text[..start_byte].rfind(&query);
+
+        // If enabled, continue again from the document's end.
+        if match_byte.is_none() && self.search.wrap_around {
+            match_byte = text.rfind(&query);
+        }
 
         let match_byte = match match_byte {
             Some(index) => index,
@@ -190,11 +207,15 @@ impl NotepadApp {
 
         let start_byte = char_to_byte_index(&text, start_char);
 
-        // Search forward, then wrap to the beginning.
-        let match_byte = text[start_byte..]
+        // First search only after the current selection.
+        let mut match_byte = text[start_byte..]
             .find(&query)
-            .map(|index| start_byte + index)
-            .or_else(|| text.find(&query));
+            .map(|index| start_byte + index);
+
+        // If enabled, continue again from the document's beginning.
+        if match_byte.is_none() && self.search.wrap_around {
+            match_byte = text.find(&query);
+        }
 
         let match_byte = match match_byte {
             Some(index) => index,
