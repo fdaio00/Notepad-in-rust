@@ -51,6 +51,29 @@ impl NotepadApp {
 
         // None means the editor lost focus; keep the previous selection.
         if let Some(cursor_range) = output.cursor_range {
+            let cursor_index = cursor_range.primary.index;
+
+            // Counts lines and columns before the current cursor position.
+            let (cursor_line, cursor_column) = {
+                let text = self.workspace.active_document().content();
+                let mut line = 1;
+                let mut column = 1;
+
+                for character in text.chars().take(cursor_index.into()) {
+                    if character == '\n' {
+                        line += 1;
+                        column = 1;
+                    } else {
+                        column += 1;
+                    }
+                }
+
+                (line, column)
+            };
+
+            self.cursor_line = cursor_line;
+            self.cursor_column = cursor_column;
+
             let range = cursor_range.as_sorted_char_range();
 
             if range.start != range.end {
@@ -59,6 +82,18 @@ impl NotepadApp {
                 self.last_editor_selection = None;
             }
         }
+    }
+
+    // Draws the current cursor position and zoom at the bottom of the window.
+    pub(super) fn show_status_bar(&self, ui: &mut egui::Ui) {
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.label(format!("{}%", self.zoom_percentage));
+            ui.separator();
+            ui.label(format!(
+                "Ln {}, Col {}",
+                self.cursor_line, self.cursor_column
+            ));
+        });
     }
 
     // Makes the editor text 10 percent larger, up to 500 percent.

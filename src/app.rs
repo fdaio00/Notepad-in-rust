@@ -30,6 +30,10 @@ pub(crate) struct NotepadApp {
     word_wrap: bool,
     // Stores the editor zoom as a percentage, such as 100 or 120.
     zoom_percentage: i32,
+    // Stores the current line number shown in the status bar.
+    cursor_line: usize,
+    // Stores the current column number shown in the status bar.
+    cursor_column: usize,
 }
 
 impl NotepadApp {
@@ -51,6 +55,8 @@ impl NotepadApp {
             search: SearchState::new(),
             word_wrap: true,
             zoom_percentage: 100,
+            cursor_line: 1,
+            cursor_column: 1,
         }
     }
 }
@@ -62,6 +68,9 @@ impl eframe::App for NotepadApp {
 
         egui::Panel::top("menu_bar").show(ui, |ui| {
             self.show_menu_bar(ui);
+        });
+        egui::Panel::bottom("status_bar").show(ui, |ui| {
+            self.show_status_bar(ui);
         });
         egui::CentralPanel::default().show(ui, |ui| {
             self.show_tabs(ui);
