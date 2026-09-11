@@ -11,6 +11,15 @@ impl NotepadApp {
 
         let available_size = ui.available_size();
         let word_wrap = self.word_wrap;
+        let mut editor_font = egui::TextStyle::Body.resolve(ui.style());
+
+        // Only the document text changes size when the user changes the zoom.
+        editor_font.size *= self.zoom_percentage as f32 / 100.0;
+
+        // Calculates enough rows to keep the editor filling the window.
+        let row_height = ui.fonts_mut(|fonts| fonts.row_height(&editor_font))
+            + ui.spacing().extra_text_line_spacing;
+        let editor_rows = ((available_size.y - 4.0) / row_height).floor().max(1.0) as usize;
 
         // Horizontal scrolling is only needed when Word Wrap is turned off.
         let output = {
@@ -27,6 +36,8 @@ impl NotepadApp {
 
                     egui::TextEdit::multiline(document.content_mut())
                         .id(editor_id)
+                        .font(editor_font)
+                        .desired_rows(editor_rows)
                         .desired_width(editor_width)
                         .min_size(available_size)
                         .show(ui)
@@ -48,6 +59,21 @@ impl NotepadApp {
                 self.last_editor_selection = None;
             }
         }
+    }
+
+    // Makes the editor text 10 percent larger, up to 500 percent.
+    pub(super) fn zoom_in(&mut self) {
+        self.zoom_percentage = (self.zoom_percentage + 10).min(500);
+    }
+
+    // Makes the editor text 10 percent smaller, down to 10 percent.
+    pub(super) fn zoom_out(&mut self) {
+        self.zoom_percentage = (self.zoom_percentage - 10).max(10);
+    }
+
+    // Returns the editor text to its normal size.
+    pub(super) fn reset_zoom(&mut self) {
+        self.zoom_percentage = 100;
     }
 
     pub(super) fn update_window_title(&self, ctx: &egui::Context) {
@@ -111,6 +137,37 @@ impl NotepadApp {
                 if ui.checkbox(&mut self.word_wrap, "Word Wrap").clicked() {
                     ui.close();
                 }
+
+                ui.separator();
+
+                ui.menu_button("Zoom", |ui| {
+                    if ui
+                        .add(egui::Button::new("Zoom In").shortcut_text("Ctrl++"))
+                        .clicked()
+                    {
+                        self.zoom_in();
+                        ui.close();
+                    }
+
+                    if ui
+                        .add(egui::Button::new("Zoom Out").shortcut_text("Ctrl+-"))
+                        .clicked()
+                    {
+                        self.zoom_out();
+                        ui.close();
+                    }
+
+                    if ui
+                        .add(egui::Button::new("Restore Default Zoom").shortcut_text("Ctrl+0"))
+                        .clicked()
+                    {
+                        self.reset_zoom();
+                        ui.close();
+                    }
+
+                    ui.separator();
+                    ui.label(format!("{}%", self.zoom_percentage));
+                });
             });
         });
     }

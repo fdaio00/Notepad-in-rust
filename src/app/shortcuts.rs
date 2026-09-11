@@ -19,6 +19,32 @@ impl NotepadApp {
 
         let find = egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::F);
 
+        let zoom_in = egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::Plus);
+
+        let zoom_in_secondary =
+            egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::Equals);
+
+        let zoom_out = egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::Minus);
+
+        let reset_zoom = egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::Num0);
+
+        if ctx.input_mut(|input| {
+            input.consume_shortcut(&zoom_in) || input.consume_shortcut(&zoom_in_secondary)
+        }) {
+            self.zoom_in();
+            return;
+        }
+
+        if ctx.input_mut(|input| input.consume_shortcut(&zoom_out)) {
+            self.zoom_out();
+            return;
+        }
+
+        if ctx.input_mut(|input| input.consume_shortcut(&reset_zoom)) {
+            self.reset_zoom();
+            return;
+        }
+
         if ctx.input_mut(|input| input.consume_shortcut(&save_as)) {
             let index = self.workspace.active_tab();
             self.save_document_as(index);

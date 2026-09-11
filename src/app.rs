@@ -28,6 +28,8 @@ pub(crate) struct NotepadApp {
     search: SearchState,
     // Controls whether long lines continue on the next visual line.
     word_wrap: bool,
+    // Stores the editor zoom as a percentage, such as 100 or 120.
+    zoom_percentage: i32,
 }
 
 impl NotepadApp {
@@ -48,6 +50,7 @@ impl NotepadApp {
             pending_paste: false,
             search: SearchState::new(),
             word_wrap: true,
+            zoom_percentage: 100,
         }
     }
 }
