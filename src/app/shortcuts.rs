@@ -73,7 +73,7 @@ impl NotepadApp {
 
         if ctx.input_mut(|input| input.consume_shortcut(&close_tab)) {
             let index = self.workspace.active_tab();
-            self.request_close_tab(index);
+            self.request_close_tab(index, ctx);
         }
     }
 }

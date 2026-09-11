@@ -162,7 +162,7 @@ impl NotepadApp {
                     .clicked()
                 {
                     let index = self.workspace.active_tab();
-                    self.request_close_tab(index);
+                    self.request_close_tab(index, ui.ctx());
                     ui.close();
                 }
             });
@@ -248,7 +248,7 @@ impl NotepadApp {
         });
 
         if let Some(index) = requested_close {
-            self.request_close_tab(index);
+            self.request_close_tab(index, ui.ctx());
         } else if let Some(index) = requested_tab {
             self.workspace.set_active_tab(index);
         }
