@@ -91,9 +91,10 @@ impl Document {
         self.modified = true;
     }
 
-    pub(crate) fn from_file(path: PathBuf, content: String) -> Self {
+    // Creates an opened document with the unique ID supplied by the workspace.
+    pub(crate) fn from_file(path: PathBuf, content: String, id: usize) -> Self {
         Self {
-            id: 1,
+            id,
             title: String::new(),
             content,
             path: Some(path),
