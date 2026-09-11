@@ -1,5 +1,4 @@
 use super::NotepadApp; //go to my parent modal
-use crate::document::Document;
 use crate::file::service::{read_text, write_text};
 use crate::ui::file_dialog::{choose_open_path, choose_save_path};
 
@@ -30,9 +29,7 @@ impl NotepadApp {
 
         match read_text(&path) {
             Ok(content) => {
-                let document = Document::from_file(path, content);
-
-                self.workspace.open_document(document);
+                self.workspace.open_document(path, content);
             }
 
             Err(error) => {

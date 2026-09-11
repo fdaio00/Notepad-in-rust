@@ -4,7 +4,17 @@ use eframe::egui;
 
 use crate::ui::dialogs::dialog::{show_confirmation_dialog, DialogResult};
 impl NotepadApp {
-    pub(super) fn request_close_tab(&mut self, index: usize) {
+    // Closes one tab, or closes the application when it is the final tab.
+    pub(super) fn request_close_tab(&mut self, index: usize, ctx: &egui::Context) {
+        if self.workspace.document(index).is_none() {
+            return;
+        }
+
+        if self.workspace.len() == 1 {
+            self.request_exit(ctx);
+            return;
+        }
+
         let modified = self
             .workspace
             .document(index)

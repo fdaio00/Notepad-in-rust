@@ -1,5 +1,5 @@
 use crate::document::Document;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub(crate) struct Workspace {
     documents: Vec<Document>,
@@ -79,7 +79,11 @@ impl Workspace {
     //     //therefore we are doing mines one so that it get to the active one
     //     //which is the new one or the new document created
     // }
-    pub(crate) fn open_document(&mut self, document: Document) {
+    // Opens a file as a document and gives it the next unique ID.
+    pub(crate) fn open_document(&mut self, path: PathBuf, content: String) {
+        let document = Document::from_file(path, content, self.next_document_id);
+
+        self.next_document_id += 1;
         self.documents.push(document);
         self.active_tab = self.documents.len() - 1;
     }
