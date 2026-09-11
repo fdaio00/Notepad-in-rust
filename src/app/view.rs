@@ -173,6 +173,14 @@ impl NotepadApp {
                     ui.close();
                 }
 
+                // The checkbox shows or hides the status bar.
+                if ui
+                    .checkbox(&mut self.show_status_bar, "Status Bar")
+                    .clicked()
+                {
+                    ui.close();
+                }
+
                 ui.separator();
 
                 ui.menu_button("Zoom", |ui| {

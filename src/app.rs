@@ -34,6 +34,8 @@ pub(crate) struct NotepadApp {
     cursor_line: usize,
     // Stores the current column number shown in the status bar.
     cursor_column: usize,
+    // Controls whether the status bar is visible at the bottom.
+    show_status_bar: bool,
 }
 
 impl NotepadApp {
@@ -57,6 +59,7 @@ impl NotepadApp {
             zoom_percentage: 100,
             cursor_line: 1,
             cursor_column: 1,
+            show_status_bar: true,
         }
     }
 }
@@ -69,9 +72,11 @@ impl eframe::App for NotepadApp {
         egui::Panel::top("menu_bar").show(ui, |ui| {
             self.show_menu_bar(ui);
         });
-        egui::Panel::bottom("status_bar").show(ui, |ui| {
-            self.show_status_bar(ui);
-        });
+        if self.show_status_bar {
+            egui::Panel::bottom("status_bar").show(ui, |ui| {
+                self.show_status_bar(ui);
+            });
+        }
         egui::CentralPanel::default().show(ui, |ui| {
             self.show_tabs(ui);
             self.show_find_bar(ui);
